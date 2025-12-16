@@ -6,10 +6,6 @@ based on image input. It is suitable for thesis-level experiments.
 
 Metrics included:
 - Mean Squared Error (MSE) of keypoints
-- Percentage of Correct Keypoints (PCK)
-- Structural Consistency (bone length ratio)
-- Average inference time
-- Throughput (frames per second)
 
 Usage:
 1. Train your rigging model.
