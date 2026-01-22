@@ -21,11 +21,11 @@ from pathlib import Path
 # ============================================
 
 # Folder containing your images (change this to your actual path)
-INPUT_FOLDER = "./human_images"  # Change to your human images folder
+INPUT_FOLDER = "./anime_images"  # Change to your human images folder
 # INPUT_FOLDER = "./anime_images"  # Use this later for anime images
 
 # Output folder for labels
-OUTPUT_FOLDER = "./labeled_data"
+OUTPUT_FOLDER = "./labeled_data_anime"
 
 # ============================================
 # KEYPOINT DEFINITIONS (21 keypoints)

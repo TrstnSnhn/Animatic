@@ -1,0 +1,159 @@
+{
+  "filename": "H_1283.jpg",
+  "filepath": "anime_images/H_1283.jpg",
+  "keypoints": [
+    {
+      "name": "head_top",
+      "x": 364.8725961148739,
+      "y": 237.06424680948257,
+      "confidence": 0.9999105930328369
+    },
+    {
+      "name": "head_center",
+      "x": 364.8725961148739,
+      "y": 294.1052511334419,
+      "confidence": 0.9999105930328369
+    },
+    {
+      "name": "neck",
+      "x": 375.6748475879431,
+      "y": 365.4065065383911,
+      "confidence": 0.9999592900276184
+    },
+    {
+      "name": "left_shoulder",
+      "x": 436.68005883693695,
+      "y": 361.69451397657394,
+      "confidence": 0.9999704360961914
+    },
+    {
+      "name": "right_shoulder",
+      "x": 314.6696363389492,
+      "y": 369.1184991002083,
+      "confidence": 0.9999481439590454
+    },
+    {
+      "name": "left_elbow",
+      "x": 467.2537726163864,
+      "y": 489.87688958644867,
+      "confidence": 0.8693634867668152
+    },
+    {
+      "name": "right_elbow",
+      "x": 284.7509390115738,
+      "y": 483.13494658470154,
+      "confidence": 0.8585551977157593
+    },
+    {
+      "name": "left_wrist",
+      "x": 493.3238786458969,
+      "y": 581.5321957468987,
+      "confidence": 0.7893627285957336
+    },
+    {
+      "name": "right_wrist",
+      "x": 230.38098111748695,
+      "y": 560.5515730082989,
+      "confidence": 0.9709562063217163
+    },
+    {
+      "name": "chest_center",
+      "x": 375.6748475879431,
+      "y": 481.06501583755016,
+      "confidence": 0.9997962117195129
+    },
+    {
+      "name": "waist_center",
+      "x": 375.91849364340305,
+      "y": 596.7235251367092,
+      "confidence": 0.9996377825737
+    },
+    {
+      "name": "left_hip",
+      "x": 416.683032810688,
+      "y": 598.9212879538536,
+      "confidence": 0.9996219873428345
+    },
+    {
+      "name": "right_hip",
+      "x": 335.1539544761181,
+      "y": 594.5257623195648,
+      "confidence": 0.9996535778045654
+    },
+    {
+      "name": "left_knee",
+      "x": 427.923783659935,
+      "y": 799.4144280552864,
+      "confidence": 0.772473156452179
+    },
+    {
+      "name": "right_knee",
+      "x": 322.7566570043564,
+      "y": 791.957642018795,
+      "confidence": 0.5580178499221802
+    },
+    {
+      "name": "left_ankle",
+      "x": 464.15780514478683,
+      "y": 983.8917769789696,
+      "confidence": 0.809806227684021
+    },
+    {
+      "name": "right_ankle",
+      "x": 319.16251078248024,
+      "y": 949.9580805301666,
+      "confidence": 0.551445722579956
+    },
+    {
+      "name": "left_hand",
+      "x": 507.88901925086975,
+      "y": 612.1335498690605,
+      "confidence": 0.7637667655944824
+    },
+    {
+      "name": "right_hand",
+      "x": 201.51193544268608,
+      "y": 593.2017304301262,
+      "confidence": 0.9644535779953003
+    },
+    {
+      "name": "left_foot",
+      "x": 440.43334275484085,
+      "y": 1050.1276633143425,
+      "confidence": 0.8205605149269104
+    },
+    {
+      "name": "right_foot",
+      "x": 312.392883002758,
+      "y": 1021.2692981958389,
+      "confidence": 0.6206157803535461
+    }
+  ],
+  "confidence": 0.8440283501849455,
+  "image_width": 735,
+  "image_height": 1137,
+  "keypoint_names": [
+    "head_top",
+    "head_center",
+    "neck",
+    "left_shoulder",
+    "right_shoulder",
+    "left_elbow",
+    "right_elbow",
+    "left_wrist",
+    "right_wrist",
+    "chest_center",
+    "waist_center",
+    "left_hip",
+    "right_hip",
+    "left_knee",
+    "right_knee",
+    "left_ankle",
+    "right_ankle",
+    "left_hand",
+    "right_hand",
+    "left_foot",
+    "right_foot"
+  ],
+  "labeled_at": "2026-01-22T18:33:17.858225"
+}
