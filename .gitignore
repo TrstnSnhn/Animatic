@@ -1,0 +1,2 @@
+trained_model/*.keras
+trained_model/keypoint_model_saved/
