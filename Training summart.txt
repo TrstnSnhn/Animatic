@@ -1,0 +1,61 @@
+============================================================
+CNN KEYPOINT DETECTION - TRAINING REPORT
+============================================================
+
+DATASET INFORMATION
+----------------------------------------
+Total images: 2,191
+Training set: 1,642 (75%)
+Validation set: 329 (15%)
+Test set: 220 (10%)
+Image size: (256, 256)
+Number of keypoints: 21
+
+MODEL ARCHITECTURE
+----------------------------------------
+Type: Convolutional Neural Network (CNN)
+Convolutional blocks: 5
+Filters per block: 32 -> 64 -> 128 -> 256 -> 512
+Dense layers: 1024 -> 512 -> 256 -> 42
+Regularization: Dropout (0.25 conv, 0.5 dense) + BatchNorm
+Activation: ReLU
+Output activation: Sigmoid
+
+TRAINING CONFIGURATION
+----------------------------------------
+Batch size: 16
+Learning rate: 0.001
+Optimizer: Adam
+Loss function: Mean Squared Error (MSE)
+Early stopping patience: 15 epochs
+
+TRAINING RESULTS
+----------------------------------------
+Total training time: 545.82 minutes (9.1 hours)
+Epochs completed: 78 (early stopped)
+Best epoch: 63
+Best validation loss: 0.003312
+
+EVALUATION METRICS (Test Set)
+----------------------------------------
+Mean Squared Error (MSE): 0.004492
+Mean Absolute Error (MAE): 0.034205
+PCK @ 0.1 threshold: 86.26%
+Average inference time: 60.16 ms
+Throughput: 16.6 FPS
+
+INTERPRETATION OF RESULTS
+----------------------------------------
+- MSE of 0.0045 means average squared error is very small
+- MAE of 0.034 means keypoints are off by ~3.4% on average
+- PCK of 86.26% means 86% of predicted keypoints are within
+  10% distance of the true location
+- 16.6 FPS is suitable for real-time applications
+
+CONCLUSION
+----------------------------------------
+The CNN model successfully learned to detect 21 body keypoints
+from 2D character images with 86.26% accuracy. The model 
+generalizes well to both human and anime-style characters.
+
+============================================================
