@@ -2,3 +2,5 @@ trained_model/*.keras
 trained_model/keypoint_model_saved/
 animatic-main/api/trained_model/best_model.keras
 animatic-main/api/trained_model/keypoint_model.keras
+trained_model/
+*.keras
