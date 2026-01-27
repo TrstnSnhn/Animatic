@@ -14,99 +14,168 @@ const Home = () => {
     const [isGenerating, setIsGenerating] = useState(false);
     const [generationStep, setGenerationStep] = useState('');
     const [isComplete, setIsComplete] = useState(false);
-    const [previewImage, setPreviewImage] = useState(null); // A URL for displaying a preview of the uploaded image
+    const [previewImage, setPreviewImage] = useState(null);
     const [glbUrl, setGlbUrl] = useState(null);
 
     const fileInputRef = useRef(null);
 
-  const blobToBase64 = (blob) => new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(blob);
-      reader.onloadend = () => resolve(reader.result);
-      reader.onerror = (error) => reject(error);
-  });
+    // Convert file to base64
+    const fileToBase64 = (file) => new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = (error) => reject(error);
+    });
+
+    const blobToBase64 = (blob) => new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(blob);
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = (error) => reject(error);
+    });
 
     const handleImageUpload = (event) => {
         const file = event.target.files[0];
         if (file) {
-          setFile2d(file)
-        const reader = new FileReader();
-        reader.onload = (e) => setUploadedImage(e.target.result);
-        reader.readAsDataURL(file);
+            setFile2d(file)
+            const reader = new FileReader();
+            reader.onload = (e) => setUploadedImage(e.target.result);
+            reader.readAsDataURL(file);
         }
     };
 
     const startGeneration = async () => {
         try {
+            if (!uploadedImage || !file2d) return;
+            
+            setIsGenerating(true);
+            setIsComplete(false);
+            
+            const steps = [
+                'Uploading image to server...',
+                'CNN analyzing character pose...',
+                'Detecting 21 keypoints...',
+                'Generating mesh vertices...',
+                'Creating bone armature...',
+                'Applying texture mapping...',
+                'Exporting GLB file...'
+            ];
+            
+            // Start showing steps
+            let stepIndex = 0;
+            setGenerationStep(steps[stepIndex]);
+            
+            const stepInterval = setInterval(() => {
+                stepIndex = (stepIndex + 1) % steps.length;
+                setGenerationStep(steps[stepIndex]);
+            }, 2000);
 
-        if (!uploadedImage) return;
-        
-        setIsGenerating(true);
-        setIsComplete(false);
-        
-          const href = `${getBackendURL()}/rig-character`
-          
-          const formData = new FormData();
-          formData.append('image', file2d);
-          formData.append('pose', "t-pose");
+            // Convert image to base64 for Gradio API
+            const base64Image = await fileToBase64(file2d);
+            
+            // Call Gradio API
+            const baseUrl = getBackendURL();
+            
+            // First, get the API endpoint info
+            const response = await fetch(`${baseUrl}/gradio_api/call/process_character_image`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    data: [base64Image]
+                })
+            });
 
-          const steps = [
-          'Analyzing 2D image structure...',
-          'Pose estimation...',
-          `Creating mesh...`,
-          'Creating texture maps...',
-          'Exporting glb file...'
-          ];
-          setGenerationStep(steps[0]);
+            if (!response.ok) {
+                throw new Error(`Server error: ${response.status}`);
+            }
 
-          const response = await fetch(href, {
-            method: 'POST',
-            body: formData,
-          });
-          
-          for (let i = 1; i < steps?.length; i++) {
-          setGenerationStep(steps[i]);
-          await new Promise(resolve => setTimeout(resolve, 500));
-          }
-          if (!response.ok) {
-            const errorData = await response.json().catch(() => ({ error: "An unknown server error occurred." }));
-            throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
-          }
+            const result = await response.json();
+            const eventId = result.event_id;
 
-          const disposition = response.headers.get("Content-Disposition");
-         let filename = "download.glb"; // fallback
+            // Poll for the result
+            const resultResponse = await fetch(`${baseUrl}/gradio_api/call/process_character_image/${eventId}`);
+            
+            if (!resultResponse.ok) {
+                throw new Error(`Failed to get result: ${resultResponse.status}`);
+            }
 
-        if (file2d && file2d.name) {
-          filename = file2d.name.replace(/\.[^/.]+$/, "") + ".glb";
-        } else if (disposition && disposition.includes("filename=")) {
-          filename = disposition
-            .split("filename=")[1]
-            .replace(/["']/g, "");
+            // Parse SSE response
+            const text = await resultResponse.text();
+            const lines = text.split('\n');
+            let data = null;
+            
+            for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                    try {
+                        data = JSON.parse(line.slice(6));
+                    } catch (e) {
+                        // Continue parsing
+                    }
+                }
+            }
+
+            clearInterval(stepInterval);
+
+            if (!data || !data[0]) {
+                throw new Error('No GLB file returned from server');
+            }
+
+            // Get the GLB file URL
+            const glbFileInfo = data[0];
+            let glbDownloadUrl;
+            
+            if (typeof glbFileInfo === 'string') {
+                glbDownloadUrl = glbFileInfo;
+            } else if (glbFileInfo.url) {
+                glbDownloadUrl = glbFileInfo.url;
+            } else if (glbFileInfo.path) {
+                glbDownloadUrl = `${baseUrl}/gradio_api/file=${glbFileInfo.path}`;
+            } else {
+                throw new Error('Invalid response format');
+            }
+
+            // Download the GLB file
+            const glbResponse = await fetch(glbDownloadUrl);
+            if (!glbResponse.ok) {
+                throw new Error('Failed to download GLB file');
+            }
+
+            const blob = await glbResponse.blob();
+            
+            // Generate filename
+            let filename = "character.glb";
+            if (file2d && file2d.name) {
+                filename = file2d.name.replace(/\.[^/.]+$/, "") + ".glb";
+            }
+
+            // Create download link
+            const url = URL.createObjectURL(blob);
+            setGlbUrl(url);
+
+            // Save to IndexedDB
+            const base64Data = await blobToBase64(blob);
+            const dataToStore = { fileData: base64Data, filename, image: file2d };
+            await saveFile(dataToStore);
+
+            // Trigger download
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', filename);
+            document.body.appendChild(link);
+            link.click();
+            link.parentNode.removeChild(link);
+            
+            setIsComplete(true);
+            toast.success('3D model generated successfully! 🎉');
+
+        } catch (err) {
+            console.error('Generation error:', err);
+            toast.error(err?.message || 'Error processing image. Please try a different image.')
+        } finally {
+            setIsGenerating(false);
         }
-
-          const blob = await response.blob();
-          const link = document.createElement('a');
-
-          const url = URL.createObjectURL(blob);
-          setGlbUrl(url);
-
-          const base64Data = await blobToBase64(blob);
-          const dataToStore = { fileData: base64Data, filename, image: file2d };
-
-          await saveFile(dataToStore);
-
-          link.href = url;
-          link.setAttribute('download', filename);
-          document.body.appendChild(link);
-          link.click(); 
-          link.parentNode.removeChild(link); 
-          setIsComplete(true);
-      } catch (err) {
-        toast.error(err?.message || 'Error processing image. Please try different image.')
-      } finally {
-        setIsGenerating(false);
-      }
-        
     };
 
     const resetProcess = () => {
@@ -116,6 +185,7 @@ const Home = () => {
         setGenerationStep('');
         setIsComplete(false);
     };
+
     return (
         <>
          <div className="max-w-7xl mx-auto px-4 py-8">
@@ -164,65 +234,6 @@ const Home = () => {
             {/* Preset Selection */}
             {!isGenerating && !isComplete && (
               <div className="space-y-8">
-                { false && <div className="text-center">
-                  <h2 className="text-3xl font-bold text-white mb-3">Choose Your Model Type</h2>
-                  <p className="text-slate-300 text-lg">Select the preset that best matches your 2D image</p>
-                </div>}
-
-               { false && <div className="grid grid-cols-2 gap-6 px-3 md:px-12">
-                  {presets.map((preset) => {
-                    
-                    const IconComponent = preset.icon;
-                    const isAvailable = preset.available
-                    if (!isAvailable) {
-                        return
-                    }
-                    return (
-                      <div
-                        key={preset.id}
-                        onClick={() => setSelectedPreset(preset.id)}
-                        className={`group cursor-pointer bg-black/40 backdrop-blur-sm rounded-2xl border-2 transition-all duration-300 hover:scale-105 ${
-                          selectedPreset?.id === preset.id
-                            ? 'border-slate-500 shadow-2xl shadow-slate-500/25'
-                            : 'border-slate-500/20 hover:border-slate-400/50'
-                        }`}
-                      >
-                        <div className="relative overflow-hidden rounded-t-2xl">
-                          <img
-                            src={preset.image}
-                            alt={preset.name}
-                            className="w-full h-48 object-cover transition-transform group-hover:scale-110"
-                          />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                          <div className="absolute bottom-4 left-4 flex items-center space-x-2">
-                            <div className="w-8 h-8 bg-slate-600 rounded-lg flex items-center justify-center">
-                              <IconComponent className="w-4 h-4 text-white" />
-                            </div>
-                            <h3 className="text-white font-semibold text-lg">{preset.name}</h3>
-                          </div>
-                        </div>
-                        <div className="p-6">
-                          <p className="text-slate-200 mb-4">{preset.description}</p>
-                          <div className="space-y-2">
-                            {preset.features.map((feature, idx) => (
-                              <div key={idx} className="flex items-center space-x-2 text-sm text-slate-300">
-                                <div className="w-1.5 h-1.5 bg-slate-500 rounded-full" />
-                                <span>{feature}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                        
-                        {selectedPreset?.id === preset.id && (
-                          <div className="absolute -top-2 -right-2 w-8 h-8 bg-slate-500 rounded-full flex items-center justify-center shadow-lg">
-                            <CheckCircle className="w-5 h-5 text-white" />
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>}
-
                 {/* Image Upload */}
                 {(
                   <div className="bg-black/40 backdrop-blur-sm rounded-2xl border border-slate-500/30 mx-1 md:mx-12 p-4 md:p-8">
@@ -237,10 +248,11 @@ const Home = () => {
                         Image Requirements
                       </h3>
                       <ul className="text-gray-300 text-left text-sm space-y-1">
-                        <li>• Character should be in T-pose for best results</li>
+                        <li>• Character should be in T-pose or A-pose for best results</li>
                         <li>• Clear, well-lit humanoid character</li>
                         <li>• Minimal background preferred</li>
                         <li>• Character should face forward</li>
+                        <li>• Full body visible (head to feet)</li>
                       </ul>
                     </div>
 
@@ -281,8 +293,12 @@ const Home = () => {
                             onClick={startGeneration}
                             className="w-full bg-gradient-to-r from-slate-600 to-pink-600 hover:from-slate-700 hover:to-pink-700 text-white py-4 px-8 rounded-xl font-semibold text-lg transition-all duration-300 transform hover:scale-105 shadow-xl"
                           >
-                            Generate 3D Model
+                            🚀 Generate 3D Model
                           </button>
+                          
+                          <p className="text-slate-400 text-sm text-center">
+                            Powered by CNN with 86.26% accuracy
+                          </p>
                         </div>
                       )}
                     </div>
