@@ -4,3 +4,7 @@ animatic-main/api/trained_model/best_model.keras
 animatic-main/api/trained_model/keypoint_model.keras
 trained_model/
 *.keras
+
+# ML artifacts
+trained_model/
+*.keras
