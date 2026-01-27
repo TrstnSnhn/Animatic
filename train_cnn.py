@@ -23,7 +23,7 @@ from pathlib import Path
 # Deep Learning imports
 import tensorflow as tf
 from tensorflow import keras
-from tensorflow.keras import layers, models, callbacks
+from tensorflow.keras import layers, models, callbacks # type: ignore
 from sklearn.model_selection import train_test_split
 
 # ============================================
