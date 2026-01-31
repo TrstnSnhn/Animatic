@@ -1,66 +1,57 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
-import {Zap,} from 'lucide-react';
+import { Zap } from "lucide-react";
 import { Toaster } from "react-hot-toast";
 
 const Layout = () => {
-    const location = useLocation()
-    
-    const currentPath = location.pathname;
+  const location = useLocation();
+  const currentPath = location.pathname;
 
-    const currentTab =
-        currentPath === "/" ? "presets" :
-        currentPath === "/recent-files" ? "recent" : "";
-    return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-900 to-slate-900">
-            <div className="bg-black/20 backdrop-blur-sm border-b border-slate-500/20">
-                <div className="max-w-7xl mx-auto px-4 py-6">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-gradient-to-r from-slate-500 to-pink-500 rounded-lg flex items-center justify-center">
-                            <Zap className="w-6 h-6 text-white" />
-                        </div>
-                        <div>
-                            <p className="text-sm md:text-5xl font-bold text-white">Animatic</p>
-                            <p className="hidden md:block text-slate-300 text-sm">2D to 3D Conversion Studio</p>
-                        </div>
-                        </div>
-                        
-                        <div className="flex flex-col sm:flex-row sm:space-x-1 space-y-1 sm:space-y-0 bg-black/30 rounded-lg p-1">
-                        <Link
-                            to="/"
-                            style={{
-                                color:"white"
-                            }}
-                            className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
-                            currentTab === 'presets'
-                                ? 'bg-slate-600 text-white shadow-lg'
-                                : 'text-slate-300 hover:text-white'
-                            }`}
-                        >
-                            Create New
-                        </Link>
+  const currentTab =
+    currentPath === "/" ? "presets" : currentPath === "/recent-files" ? "recent" : "";
 
-                        <Link
-                            to="/recent-files"
-                            style={{
-                                color:"white"
-                            }}
-                            className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
-                            currentTab === 'recent'
-                                ? 'bg-slate-600 text-white shadow-lg'
-                                : 'text-slate-300 hover:text-white'
-                            }`}
-                        >
-                            Recent Files
-                        </Link>
-                        </div>
-                    </div>
+  return (
+    <div className="min-h-screen bg-ink-950 text-white">
+      <div className="relative min-h-screen overflow-hidden">
+        <div className="pointer-events-none absolute inset-0 bg-anim-vignette" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[55%] bg-anim-glow blur-3xl opacity-70" />
+
+        <header className="relative mx-auto w-full max-w-6xl px-6 pt-10">
+          <div className="flex flex-col items-center gap-6">
+            <div className="flex items-center gap-3">
+              <div className="h-11 w-11 rounded-2xl bg-anim-badge p-[2px]">
+                <div className="flex h-full w-full items-center justify-center rounded-[1.05rem] bg-ink-950">
+                  <Zap className="h-5 w-5 text-white" />
                 </div>
+              </div>
+
+              <div className="leading-tight text-left">
+                <div className="text-2xl font-semibold tracking-tight">Animatic</div>
+                <div className="text-xs text-white/60">2D to 3D Conversion Studio</div>
+              </div>
             </div>
-            <Toaster position="top-right" />
-            <Outlet />
-        </div>
-    )
-}
+
+            <div className="glass-soft flex items-center gap-1 p-1">
+              <Link to="/" className={currentTab === "presets" ? "tab-active" : "tab"}>
+                Create New
+              </Link>
+              <Link
+                to="/recent-files"
+                className={currentTab === "recent" ? "tab-active" : "tab"}
+              >
+                Recent Files
+              </Link>
+            </div>
+          </div>
+        </header>
+
+        <Toaster position="top-right" />
+
+        <main className="relative mx-auto w-full max-w-6xl px-6 pb-16 pt-10">
+          <Outlet />
+        </main>
+      </div>
+    </div>
+  );
+};
 
 export default Layout;
