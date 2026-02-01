@@ -1,11 +1,17 @@
 @import "tailwindcss";
 
+/* Tailwind v4 tokens */
 @theme {
-  --color-ink-950: #05060A;
-  --color-ink-900: #0A0B12;
-  --color-ink-850: #0D1020;
-}
+  --color-ink-950: #05060a;
+  --color-ink-900: #0a0b12;
+  --color-ink-850: #0d1020;
 
+  /* Define named shadows so `shadow-glass` / `shadow-soft` work */
+  --shadow-glass: 0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 24px 70px rgba(0, 0, 0, 0.55);
+  --shadow-soft: 0 0 0 1px rgba(255, 255, 255, 0.06),
+    0 14px 38px rgba(0, 0, 0, 0.45);
+}
 
 @layer base {
   html,
@@ -15,7 +21,7 @@
   }
 
   body {
-  @apply bg-neutral-950 text-white;
+    @apply bg-neutral-950 text-white;
   }
 }
 
