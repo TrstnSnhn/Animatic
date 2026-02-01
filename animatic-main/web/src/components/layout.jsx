@@ -10,7 +10,7 @@ const Layout = () => {
     currentPath === "/" ? "presets" : currentPath === "/recent-files" ? "recent" : "";
 
   return (
-    <div className="min-h-screen bg-ink-950 text-white">
+    <div className="min-h-screen bg-neutral-950 text-white">
       <div className="relative min-h-screen overflow-hidden">
         <div className="pointer-events-none absolute inset-0 bg-anim-vignette" />
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[55%] bg-anim-glow blur-3xl opacity-70" />
@@ -19,7 +19,7 @@ const Layout = () => {
           <div className="flex flex-col items-center gap-6">
             <div className="flex items-center gap-3">
               <div className="h-11 w-11 rounded-2xl bg-anim-badge p-[2px]">
-                <div className="flex h-full w-full items-center justify-center rounded-[1.05rem] bg-ink-950">
+                <div className="flex h-full w-full items-center justify-center rounded-[1.05rem] bg-neutral-950">
                   <Zap className="h-5 w-5 text-white" />
                 </div>
               </div>
