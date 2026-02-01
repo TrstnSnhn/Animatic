@@ -2,16 +2,40 @@
 
 /* Tailwind v4 tokens */
 @theme {
+  /* colors if you want them */
   --color-ink-950: #05060a;
   --color-ink-900: #0a0b12;
   --color-ink-850: #0d1020;
 
-  /* Define named shadows so `shadow-glass` / `shadow-soft` work */
+  /* shadows if you use shadow-glass / shadow-soft */
   --shadow-glass: 0 0 0 1px rgba(255, 255, 255, 0.08),
     0 24px 70px rgba(0, 0, 0, 0.55);
   --shadow-soft: 0 0 0 1px rgba(255, 255, 255, 0.06),
     0 14px 38px rgba(0, 0, 0, 0.45);
+
+  /* these three are required for layout.jsx */
+  --background-image-anim-vignette: radial-gradient(
+    ellipse at center,
+    rgba(255, 255, 255, 0.10) 0%,
+    rgba(0, 0, 0, 0.82) 55%,
+    rgba(0, 0, 0, 1) 100%
+  );
+
+  --background-image-anim-glow: linear-gradient(
+    90deg,
+    rgba(0, 194, 255, 0.85) 0%,
+    rgba(139, 92, 255, 0.35) 42%,
+    rgba(255, 71, 183, 0.85) 100%
+  );
+
+  --background-image-anim-badge: linear-gradient(
+    135deg,
+    #00c2ff 0%,
+    #8b5cff 55%,
+    #ff47b7 100%
+  );
 }
+
 
 @layer base {
   html,
