@@ -2,9 +2,6 @@ import { useRef, useState } from "react";
 import { Upload, Clock, CheckCircle, User } from "lucide-react";
 import toast from "react-hot-toast";
 
-import { saveFile } from "../helper/db";
-import getBackendURL from "../config";
-
 const Home = () => {
   const heading = "Go from 2D Model to Fully Rigged in Seconds. No, Really.";
   const subHeading =
@@ -18,22 +15,6 @@ const Home = () => {
   const [isComplete, setIsComplete] = useState(false);
 
   const fileInputRef = useRef(null);
-
-  const fileToBase64 = (file) =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = (error) => reject(error);
-    });
-
-  const blobToBase64 = (blob) =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(blob);
-      reader.onloadend = () => resolve(reader.result);
-      reader.onerror = (error) => reject(error);
-    });
 
   const handleImageUpload = (event) => {
     const file = event.target.files?.[0];
@@ -57,18 +38,23 @@ const Home = () => {
     setIsComplete(false);
   };
 
+  // Frontend only mock generation.
+  // This keeps the UX and lets you deploy without any backend.
   const startGeneration = async () => {
     try {
-      if (!uploadedImage || !file2d) return;
+      if (!uploadedImage || !file2d) {
+        toast.error("Please upload an image first.");
+        return;
+      }
 
       setIsGenerating(true);
       setIsComplete(false);
 
       const steps = [
-        "Uploading image to server...",
-        "CNN analyzing character pose...",
-        "Detecting 21 keypoints...",
-        "Generating mesh vertices...",
+        "Preparing image...",
+        "Analyzing pose...",
+        "Detecting keypoints...",
+        "Generating mesh...",
         "Creating bone armature...",
         "Applying texture mapping...",
         "Exporting GLB file...",
@@ -78,86 +64,23 @@ const Home = () => {
       setGenerationStep(steps[stepIndex]);
 
       const stepInterval = setInterval(() => {
-        stepIndex = (stepIndex + 1) % steps.length;
+        stepIndex = Math.min(stepIndex + 1, steps.length - 1);
         setGenerationStep(steps[stepIndex]);
-      }, 2000);
+      }, 900);
 
-      const base64Image = await fileToBase64(file2d);
-      const baseUrl = getBackendURL();
-
-      const response = await fetch(
-        `${baseUrl}/gradio_api/call/process_character_image`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ data: [base64Image] }),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`Server error: ${response.status}`);
-      }
-
-      const result = await response.json();
-      const eventId = result.event_id;
-
-      const resultResponse = await fetch(
-        `${baseUrl}/gradio_api/call/process_character_image/${eventId}`
-      );
-
-      if (!resultResponse.ok) {
-        throw new Error(`Failed to get result: ${resultResponse.status}`);
-      }
-
-      const text = await resultResponse.text();
-      const lines = text.split("\n");
-      let data = null;
-
-      for (const line of lines) {
-        if (line.startsWith("data: ")) {
-          try {
-            data = JSON.parse(line.slice(6));
-          } catch {
-            // ignore parse errors and continue
-          }
-        }
-      }
-
+      // Simulate work time
+      await new Promise((r) => setTimeout(r, 6500));
       clearInterval(stepInterval);
 
-      if (!data || !data[0]) {
-        throw new Error("No GLB file returned from server");
-      }
+      // Optional: create a placeholder file so the user still "downloads" something.
+      // This is NOT a real GLB. It is just a dummy file so the UI flow stays intact.
+      const baseName = file2d?.name ? file2d.name.replace(/\.[^/.]+$/, "") : "character";
+      const filename = `${baseName}.glb`;
 
-      const glbFileInfo = data[0];
-      let glbDownloadUrl;
-
-      if (typeof glbFileInfo === "string") {
-        glbDownloadUrl = glbFileInfo;
-      } else if (glbFileInfo.url) {
-        glbDownloadUrl = glbFileInfo.url;
-      } else if (glbFileInfo.path) {
-        glbDownloadUrl = `${baseUrl}/gradio_api/file=${glbFileInfo.path}`;
-      } else {
-        throw new Error("Invalid response format");
-      }
-
-      const glbResponse = await fetch(glbDownloadUrl);
-      if (!glbResponse.ok) {
-        throw new Error("Failed to download GLB file");
-      }
-
-      const blob = await glbResponse.blob();
-
-      let filename = "character.glb";
-      if (file2d?.name) {
-        filename = file2d.name.replace(/\.[^/.]+$/, "") + ".glb";
-      }
-
+      const placeholderText =
+        "Animatic frontend demo build.\nBackend model is disabled for this deployment.\n";
+      const blob = new Blob([placeholderText], { type: "model/gltf-binary" });
       const url = URL.createObjectURL(blob);
-
-      const base64Data = await blobToBase64(blob);
-      await saveFile({ fileData: base64Data, filename, image: file2d });
 
       const link = document.createElement("a");
       link.href = url;
@@ -166,13 +89,13 @@ const Home = () => {
       link.click();
       link.parentNode.removeChild(link);
 
+      URL.revokeObjectURL(url);
+
       setIsComplete(true);
-      toast.success("3D model generated successfully! 🎉");
+      toast.success("Demo complete. Backend is disabled in this build.");
     } catch (err) {
-      console.error("Generation error:", err);
-      toast.error(
-        err?.message || "Error processing image. Please try a different image."
-      );
+      console.error("Demo generation error:", err);
+      toast.error("Something went wrong. Please try again.");
     } finally {
       setIsGenerating(false);
     }
@@ -223,7 +146,7 @@ const Home = () => {
               </div>
 
               <p className="text-xs text-white/55">
-                Keep this tab open. Your GLB download will start automatically.
+                This is a frontend-only demo flow. No model is being run.
               </p>
             </div>
           )}
@@ -232,7 +155,7 @@ const Home = () => {
             <div className="mt-4 flex items-center gap-3 text-green-300">
               <CheckCircle className="h-6 w-6" />
               <span className="text-sm sm:text-base">
-                Your GLB file is ready and downloading automatically!
+                Demo done. A placeholder file was downloaded. Backend is disabled.
               </span>
             </div>
           )}
@@ -247,7 +170,7 @@ const Home = () => {
               Upload Your 2D Image
             </h2>
             <p className="mt-2 text-sm text-white/60">
-              Best results come from a clean front-facing full body pose.
+              Frontend demo mode. Upload works. Model generation is disabled.
             </p>
           </div>
 
@@ -315,11 +238,11 @@ const Home = () => {
                     onClick={startGeneration}
                     className="w-full rounded-xl bg-white/12 hover:bg-white/16 text-white py-4 px-6 font-semibold transition"
                   >
-                    Generate 3D Model
+                    Run Demo Generation
                   </button>
 
                   <p className="text-xs text-white/55 text-center">
-                    Powered by CNN with 86.26% accuracy
+                    Backend model is disabled for frontend deployment.
                   </p>
                 </div>
               )}
