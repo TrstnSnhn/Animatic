@@ -1,5 +1,7 @@
 import { useRef, useState } from "react";
 import { Upload, Clock, CheckCircle, User } from "lucide-react";
+import { saveFile } from "../helper/db";
+import getBackendURL from "../config";
 import toast from "react-hot-toast";
 
 const Home = () => {
@@ -15,6 +17,14 @@ const Home = () => {
   const [isComplete, setIsComplete] = useState(false);
 
   const fileInputRef = useRef(null);
+
+  const blobToBase64 = (blob) =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(blob);
+      reader.onloadend = () => resolve(reader.result);
+      reader.onerror = (error) => reject(error);
+    });
 
   const handleImageUpload = (event) => {
     const file = event.target.files?.[0];
@@ -38,8 +48,6 @@ const Home = () => {
     setIsComplete(false);
   };
 
-  // Frontend only mock generation.
-  // This keeps the UX and lets you deploy without any backend.
   const startGeneration = async () => {
     try {
       if (!uploadedImage || !file2d) {
@@ -50,37 +58,57 @@ const Home = () => {
       setIsGenerating(true);
       setIsComplete(false);
 
+      const href = `${getBackendURL()}/rig-character`;
+
+      const formData = new FormData();
+      formData.append("image", file2d);
+      formData.append("pose", "t-pose");
+
       const steps = [
-        "Preparing image...",
-        "Analyzing pose...",
-        "Detecting keypoints...",
-        "Generating mesh...",
-        "Creating bone armature...",
-        "Applying texture mapping...",
+        "Analyzing 2D image structure...",
+        "Pose estimation...",
+        "Creating mesh...",
+        "Creating texture maps...",
         "Exporting GLB file...",
       ];
 
-      let stepIndex = 0;
-      setGenerationStep(steps[stepIndex]);
+      setGenerationStep(steps[0]);
 
-      const stepInterval = setInterval(() => {
-        stepIndex = Math.min(stepIndex + 1, steps.length - 1);
-        setGenerationStep(steps[stepIndex]);
-      }, 900);
+      const response = await fetch(href, {
+        method: "POST",
+        body: formData,
+      });
 
-      // Simulate work time
-      await new Promise((r) => setTimeout(r, 6500));
-      clearInterval(stepInterval);
+      for (let i = 1; i < steps.length; i++) {
+        setGenerationStep(steps[i]);
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }
 
-      // Optional: create a placeholder file so the user still "downloads" something.
-      // This is NOT a real GLB. It is just a dummy file so the UI flow stays intact.
-      const baseName = file2d?.name ? file2d.name.replace(/\.[^/.]+$/, "") : "character";
-      const filename = `${baseName}.glb`;
+      if (!response.ok) {
+        const errorData = await response
+          .json()
+          .catch(() => ({ error: "An unknown server error occurred." }));
+        throw new Error(
+          errorData.error || `HTTP error! status: ${response.status}`
+        );
+      }
 
-      const placeholderText =
-        "Animatic frontend demo build.\nBackend model is disabled for this deployment.\n";
-      const blob = new Blob([placeholderText], { type: "model/gltf-binary" });
+      const disposition = response.headers.get("Content-Disposition");
+      let filename = "download.glb";
+
+      if (file2d && file2d.name) {
+        filename = file2d.name.replace(/\.[^/.]+$/, "") + ".glb";
+      } else if (disposition && disposition.includes("filename=")) {
+        filename = disposition.split("filename=")[1].replace(/["']/g, "");
+      }
+
+      const blob = await response.blob();
       const url = URL.createObjectURL(blob);
+
+      const base64Data = await blobToBase64(blob);
+      const dataToStore = { fileData: base64Data, filename, image: file2d };
+
+      await saveFile(dataToStore);
 
       const link = document.createElement("a");
       link.href = url;
@@ -89,13 +117,13 @@ const Home = () => {
       link.click();
       link.parentNode.removeChild(link);
 
-      URL.revokeObjectURL(url);
-
       setIsComplete(true);
-      toast.success("Demo complete. Backend is disabled in this build.");
+      toast.success("3D model generated successfully!");
     } catch (err) {
-      console.error("Demo generation error:", err);
-      toast.error("Something went wrong. Please try again.");
+      console.error("Generation error:", err);
+      toast.error(
+        err?.message || "Error processing image. Please try a different image."
+      );
     } finally {
       setIsGenerating(false);
     }
@@ -115,7 +143,7 @@ const Home = () => {
 
       {/* Status panel */}
       {(isGenerating || isComplete) && (
-        <section className="rounded-2xl bg-white/5 backdrop-blur-xl p-5 sm:p-6 shadow-[0_0_0_1px_rgba(255,255,255,0.08),0_20px_60px_rgba(0,0,0,0.55)]">
+        <section className="glass p-5 sm:p-6">
           <div className="flex items-start sm:items-center justify-between gap-4">
             <h3 className="text-lg sm:text-xl font-semibold text-white">
               {isComplete ? "Generation Complete!" : "Generating 3D Model..."}
@@ -140,14 +168,10 @@ const Home = () => {
 
               <div className="h-3 w-full rounded-full bg-black/30">
                 <div
-                  className="h-3 rounded-full bg-gradient-to-r from-slate-400 to-pink-500 animate-pulse"
+                  className="h-3 rounded-full bg-gradient-to-r from-cyan-400 via-violet-500 to-pink-500 animate-pulse"
                   style={{ width: "60%" }}
                 />
               </div>
-
-              <p className="text-xs text-white/55">
-                This is a frontend-only demo flow. No model is being run.
-              </p>
             </div>
           )}
 
@@ -155,7 +179,7 @@ const Home = () => {
             <div className="mt-4 flex items-center gap-3 text-green-300">
               <CheckCircle className="h-6 w-6" />
               <span className="text-sm sm:text-base">
-                Demo done. A placeholder file was downloaded. Backend is disabled.
+                Your GLB file is ready and downloading automatically!
               </span>
             </div>
           )}
@@ -164,14 +188,11 @@ const Home = () => {
 
       {/* Main card */}
       {!isGenerating && !isComplete && (
-        <section className="rounded-2xl bg-white/5 backdrop-blur-xl p-5 sm:p-8 shadow-[0_0_0_1px_rgba(255,255,255,0.08),0_24px_70px_rgba(0,0,0,0.55)]">
+        <section className="glass p-5 sm:p-8">
           <div className="text-center">
             <h2 className="text-xl sm:text-2xl font-semibold text-white">
               Upload Your 2D Image
             </h2>
-            <p className="mt-2 text-sm text-white/60">
-              Frontend demo mode. Upload works. Model generation is disabled.
-            </p>
           </div>
 
           {/* Requirements */}
@@ -204,7 +225,7 @@ const Home = () => {
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="w-full rounded-2xl border border-dashed border-white/20 bg-white/[0.04] hover:bg-white/[0.06] transition p-10 text-center"
+                className="w-full h-full min-h-[200px] rounded-2xl border border-dashed border-white/20 bg-white/[0.04] hover:bg-white/[0.06] transition p-10 text-center"
               >
                 <Upload className="h-12 w-12 text-white/70 mx-auto mb-4" />
                 <div className="text-base font-medium text-white">
@@ -216,7 +237,7 @@ const Home = () => {
               </button>
             </div>
 
-            <div className="rounded-2xl bg-black/30 p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.06)]">
+            <div className="rounded-2xl bg-black/30 p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.06)] min-h-[200px]">
               {!uploadedImage ? (
                 <div className="h-full flex items-center justify-center text-sm text-white/55">
                   Preview will appear here after upload.
@@ -238,12 +259,8 @@ const Home = () => {
                     onClick={startGeneration}
                     className="w-full rounded-xl bg-white/12 hover:bg-white/16 text-white py-4 px-6 font-semibold transition"
                   >
-                    Run Demo Generation
+                    Generate 3D Model
                   </button>
-
-                  <p className="text-xs text-white/55 text-center">
-                    Backend model is disabled for frontend deployment.
-                  </p>
                 </div>
               )}
             </div>
