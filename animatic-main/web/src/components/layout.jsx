@@ -16,9 +16,9 @@ const Layout = () => {
         <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[200%] h-[60%] bg-anim-glow blur-3xl opacity-60" />
       </div>
 
-      {/* Content */}
-      <div className="relative min-h-screen flex flex-col">
-        <header className="w-full px-6 pt-10">
+      {/* Content - centered */}
+      <div className="relative min-h-screen flex flex-col items-center">
+        <header className="w-full max-w-4xl mx-auto px-6 pt-10">
           <div className="flex flex-col items-center gap-6">
             <div className="flex items-center gap-3">
               {/* Custom Logo */}
@@ -50,7 +50,7 @@ const Layout = () => {
 
         <Toaster position="top-right" />
 
-        <main className="flex-1 w-full max-w-5xl mx-auto px-6 pb-16 pt-10">
+        <main className="flex-1 w-full max-w-4xl mx-auto px-6 pb-16 pt-10">
           <Outlet />
         </main>
       </div>
