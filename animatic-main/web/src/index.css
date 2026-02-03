@@ -1,0 +1,99 @@
+@import "tailwindcss";
+
+/* Tailwind v4 theme tokens */
+@theme {
+  /* Custom colors */
+  --color-ink-950: #05060a;
+  --color-ink-900: #0a0b12;
+  --color-ink-850: #0d1020;
+  
+  --color-neon-cyan: #00c2ff;
+  --color-neon-violet: #8b5cff;
+  --color-neon-pink: #ff47b7;
+
+  /* Custom shadows */
+  --shadow-glass: 0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 24px 70px rgba(0, 0, 0, 0.55);
+  --shadow-soft: 0 0 0 1px rgba(255, 255, 255, 0.06),
+    0 14px 38px rgba(0, 0, 0, 0.45);
+
+  /* Custom background images */
+  --background-image-anim-vignette: radial-gradient(
+    ellipse at center,
+    rgba(255, 255, 255, 0.10) 0%,
+    rgba(0, 0, 0, 0.82) 55%,
+    rgba(0, 0, 0, 1) 100%
+  );
+
+  --background-image-anim-glow: linear-gradient(
+    90deg,
+    rgba(0, 194, 255, 0.85) 0%,
+    rgba(139, 92, 255, 0.35) 42%,
+    rgba(255, 71, 183, 0.85) 100%
+  );
+
+  --background-image-anim-badge: linear-gradient(
+    135deg,
+    #00c2ff 0%,
+    #8b5cff 55%,
+    #ff47b7 100%
+  );
+}
+
+@layer base {
+  html,
+  body,
+  #app {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-neutral-950 text-white;
+  }
+}
+
+@layer components {
+  .glass {
+    @apply rounded-2xl backdrop-blur-xl;
+    background: rgba(255, 255, 255, 0.05);
+    box-shadow: var(--shadow-glass);
+  }
+
+  .glass-soft {
+    @apply rounded-2xl backdrop-blur-xl;
+    background: rgba(255, 255, 255, 0.04);
+    box-shadow: var(--shadow-soft);
+  }
+
+  .pill {
+    @apply rounded-xl px-4 py-2 text-sm font-medium;
+  }
+
+  .tab {
+    @apply pill transition-colors;
+    color: rgba(255, 255, 255, 0.8);
+  }
+  
+  .tab:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+  }
+
+  .tab-active {
+    @apply pill text-white;
+    background: rgba(255, 255, 255, 0.14);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12);
+  }
+
+  .bg-anim-vignette {
+    background-image: var(--background-image-anim-vignette);
+  }
+
+  .bg-anim-glow {
+    background-image: var(--background-image-anim-glow);
+  }
+
+  .bg-anim-badge {
+    background-image: var(--background-image-anim-badge);
+  }
+}
