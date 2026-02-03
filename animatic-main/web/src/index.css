@@ -16,28 +16,6 @@
     0 24px 70px rgba(0, 0, 0, 0.55);
   --shadow-soft: 0 0 0 1px rgba(255, 255, 255, 0.06),
     0 14px 38px rgba(0, 0, 0, 0.45);
-
-  /* Custom background images */
-  --background-image-anim-vignette: radial-gradient(
-    ellipse at center,
-    rgba(255, 255, 255, 0.10) 0%,
-    rgba(0, 0, 0, 0.82) 55%,
-    rgba(0, 0, 0, 1) 100%
-  );
-
-  --background-image-anim-glow: linear-gradient(
-    90deg,
-    rgba(0, 194, 255, 0.85) 0%,
-    rgba(139, 92, 255, 0.35) 42%,
-    rgba(255, 71, 183, 0.85) 100%
-  );
-
-  --background-image-anim-badge: linear-gradient(
-    135deg,
-    #00c2ff 0%,
-    #8b5cff 55%,
-    #ff47b7 100%
-  );
 }
 
 @layer base {
@@ -54,24 +32,31 @@
 
 @layer components {
   .glass {
-    @apply rounded-2xl backdrop-blur-xl;
+    border-radius: 1rem;
     background: rgba(255, 255, 255, 0.05);
-    box-shadow: var(--shadow-glass);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08),
+      0 24px 70px rgba(0, 0, 0, 0.55);
   }
 
   .glass-soft {
-    @apply rounded-2xl backdrop-blur-xl;
+    border-radius: 1rem;
     background: rgba(255, 255, 255, 0.04);
-    box-shadow: var(--shadow-soft);
-  }
-
-  .pill {
-    @apply rounded-xl px-4 py-2 text-sm font-medium;
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06),
+      0 14px 38px rgba(0, 0, 0, 0.45);
   }
 
   .tab {
-    @apply pill transition-colors;
+    border-radius: 0.75rem;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
     color: rgba(255, 255, 255, 0.8);
+    transition: all 0.2s ease;
+    text-decoration: none;
   }
   
   .tab:hover {
@@ -80,20 +65,40 @@
   }
 
   .tab-active {
-    @apply pill text-white;
+    border-radius: 0.75rem;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: white;
     background: rgba(255, 255, 255, 0.14);
     box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12);
+    text-decoration: none;
   }
 
   .bg-anim-vignette {
-    background-image: var(--background-image-anim-vignette);
+    background-image: radial-gradient(
+      ellipse at center,
+      rgba(255, 255, 255, 0.10) 0%,
+      rgba(0, 0, 0, 0.82) 55%,
+      rgba(0, 0, 0, 1) 100%
+    );
   }
 
   .bg-anim-glow {
-    background-image: var(--background-image-anim-glow);
+    background-image: linear-gradient(
+      90deg,
+      rgba(0, 194, 255, 0.85) 0%,
+      rgba(139, 92, 255, 0.35) 42%,
+      rgba(255, 71, 183, 0.85) 100%
+    );
   }
 
   .bg-anim-badge {
-    background-image: var(--background-image-anim-badge);
+    background-image: linear-gradient(
+      135deg,
+      #00c2ff 0%,
+      #8b5cff 55%,
+      #ff47b7 100%
+    );
   }
 }
