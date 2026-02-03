@@ -10,11 +10,15 @@ const Layout = () => {
     currentPath === "/" ? "presets" : currentPath === "/recent-files" ? "recent" : "";
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-white">
-      <div className="relative min-h-screen overflow-hidden">
-        <div className="pointer-events-none absolute inset-0 bg-anim-vignette" />
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[55%] bg-anim-glow blur-3xl opacity-70" />
+    <div className="min-h-screen bg-neutral-950 text-white overflow-x-hidden">
+      {/* Background effects - full width */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute inset-0 bg-anim-vignette" />
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[200%] h-[60%] bg-anim-glow blur-3xl opacity-60" />
+      </div>
 
+      {/* Content */}
+      <div className="relative min-h-screen">
         <header className="relative mx-auto w-full max-w-6xl px-6 pt-10">
           <div className="flex flex-col items-center gap-6">
             <div className="flex items-center gap-3">
