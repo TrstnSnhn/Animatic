@@ -58,7 +58,7 @@ const Home = () => {
       setIsGenerating(true);
       setIsComplete(false);
 
-      const href = `${getBackendURL()}/rig-character`;
+      const href = `${getBackendURL()}/api/rig-character`;
 
       const formData = new FormData();
       formData.append("image", file2d);
