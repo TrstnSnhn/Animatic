@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 
 const RecentFiles = () => {
     const [generatedFiles, setRecentFiles] = useState(null);
+    const [deletingId, setDeletingId] = useState(null);
 
     const base64ToBlob = (base64Data, contentType = 'model/gltf-binary') => {
         const byteCharacters = atob(base64Data.split(',')[1]);
@@ -41,23 +42,33 @@ const RecentFiles = () => {
         URL.revokeObjectURL(url);
     };
 
-    const handleRemove = (id) => {
+    const handleRemove = async (id) => {
         const confirmed = window.confirm("Are you sure you want to delete this?");
         if (confirmed) {
+            setDeletingId(id);
             try {
-                deleteFile(id);
-                setRecentFiles(generatedFiles.filter(item => item.id !== id));
+                await deleteFile(id);
+                setRecentFiles((files) => files.filter(item => item.id !== id));
                 toast.success('Successfully removed!');
             } catch (error) {
-                toast.error('Failed to delete file');
+                console.error("Failed to delete file:", error);
+                toast.error('Failed to delete file. Please try again.');
+            } finally {
+                setDeletingId(null);
             }
         }
     };
 
     useEffect(() => {
         (async () => {
-            const glbFiles = await getAllFiles();
-            setRecentFiles(glbFiles);
+            try {
+                const glbFiles = await getAllFiles();
+                setRecentFiles(glbFiles);
+            } catch (error) {
+                console.error("Failed to load recent files:", error);
+                toast.error('Failed to load recent files.');
+                setRecentFiles([]);
+            }
         })();
     }, []);
 
@@ -100,10 +111,13 @@ const RecentFiles = () => {
                                     </button>
                                     <button 
                                         onClick={() => handleRemove(file.id)}
+                                        disabled={deletingId === file.id}
                                         className="flex items-center gap-2 rounded-xl bg-red-500/20 hover:bg-red-500/30 px-4 py-2 text-sm font-medium text-red-300 transition"
                                     >
                                         <Trash2 className="w-4 h-4" />
-                                        <span className="hidden sm:inline">Delete</span>
+                                        <span className="hidden sm:inline">
+                                            {deletingId === file.id ? "Deleting..." : "Delete"}
+                                        </span>
                                     </button>
                                 </div>
                             </div>

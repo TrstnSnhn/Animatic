@@ -11,11 +11,13 @@ Thesis: 2D to 3D Character Rigging using CNN
 
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
+from werkzeug.exceptions import RequestEntityTooLarge
 import cv2
 import numpy as np
 import os
 import tempfile
 import json
+import io
 from PIL import Image
 import struct
 import warnings
@@ -23,12 +25,23 @@ warnings.filterwarnings('ignore')
 
 # Import CNN predictor
 from cnn_predictor import CNNKeypointPredictor, HybridKeypointPredictor, load_predictor
+from validation import MAX_REQUEST_SIZE_BYTES, UploadValidationError, validate_uploaded_image
 
 app = Flask(__name__)
+app.config['MAX_CONTENT_LENGTH'] = MAX_REQUEST_SIZE_BYTES
 CORS(app)
 
 # Global predictor instance
 PREDICTOR = None
+
+
+def api_error(code, message, status_code=400):
+    return jsonify({'error': {'code': code, 'message': message}}), status_code
+
+
+@app.errorhandler(RequestEntityTooLarge)
+def handle_request_too_large(_error):
+    return api_error('file_too_large', 'Please upload an image smaller than 10 MB.', 413)
 
 def get_predictor():
     """Get or initialize the keypoint predictor."""
@@ -660,54 +673,65 @@ def create_character_faces(vertex_count):
 @app.route('/api/rig-character', methods=['POST'])
 def process_character():
     """Main endpoint to process a character image and return rigged GLB."""
+    temp_image_path = None
+    glb_path = None
+
+    if 'image' not in request.files:
+        return api_error('missing_file', 'No image file was provided.')
+
+    file = request.files['image']
     try:
-        if 'image' not in request.files:
-            return jsonify({'error': 'No image file provided'}), 400
-        
-        file = request.files['image']
-        if file.filename == '':
-            return jsonify({'error': 'No image file selected'}), 400
-        
+        validate_uploaded_image(file, request.content_length)
+    except UploadValidationError as e:
+        return api_error(e.code, e.message, e.status_code)
+
+    try:
         # Save uploaded file temporarily
         with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as temp_file:
             file.save(temp_file.name)
             temp_image_path = temp_file.name
-        
-        try:
-            # Process with CNN
-            processor = CNNCharacterProcessor()
-            keypoints, keypoint_scores, image = processor.process_image(temp_image_path)
 
-            # Create mesh
-            vertices, uvs = processor.create_mesh_vertices_with_uv(keypoints, image.shape)
-            faces = create_character_faces(len(vertices))
+        # Process with CNN
+        processor = CNNCharacterProcessor()
+        keypoints, keypoint_scores, image = processor.process_image(temp_image_path)
 
-            # Create armature
-            bones = processor.create_tpose_armature(keypoints, image.shape)
+        # Create mesh
+        vertices, uvs = processor.create_mesh_vertices_with_uv(keypoints, image.shape)
+        faces = create_character_faces(len(vertices))
 
-            # Generate GLB
-            with tempfile.NamedTemporaryFile(delete=False, suffix='.glb') as glb_file:
-                glb_file.close()
-                processor.create_glb_with_texture(vertices, uvs, faces, bones, temp_image_path, glb_file.name)
-                glb_path = glb_file.name
-            
-            # Cleanup
-            os.unlink(temp_image_path)
-            
-            return send_file(
-                glb_path,
-                as_attachment=True,
-                download_name='cnn_rigged_character.glb',
-                mimetype='model/gltf-binary'
-            )
-            
-        except Exception as e:
-            if os.path.exists(temp_image_path):
-                os.unlink(temp_image_path)
-            raise e
-            
+        # Create armature
+        bones = processor.create_tpose_armature(keypoints, image.shape)
+
+        # Generate GLB
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.glb') as glb_file:
+            glb_file.close()
+            processor.create_glb_with_texture(vertices, uvs, faces, bones, temp_image_path, glb_file.name)
+            glb_path = glb_file.name
+
+        with open(glb_path, 'rb') as f:
+            glb_bytes = f.read()
+
+        return send_file(
+            io.BytesIO(glb_bytes),
+            as_attachment=True,
+            download_name='cnn_rigged_character.glb',
+            mimetype='model/gltf-binary'
+        )
+
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        app.logger.exception("Character generation failed")
+        return api_error(
+            'generation_failed',
+            'Unable to generate a GLB from this image. Please try a clearer full-body character image.',
+            500
+        )
+    finally:
+        for path in (temp_image_path, glb_path):
+            if path and os.path.exists(path):
+                try:
+                    os.unlink(path)
+                except OSError:
+                    app.logger.warning("Could not remove temporary file: %s", path)
 
 
 @app.route('/api/health', methods=['GET'])

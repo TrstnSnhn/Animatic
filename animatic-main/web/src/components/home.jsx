@@ -3,6 +3,14 @@ import { Upload, Clock, CheckCircle, User } from "lucide-react";
 import { saveFile } from "../helper/db";
 import getBackendURL from "../config";
 import toast from "react-hot-toast";
+import { validateImageFile } from "../utils/file-validation";
+import {
+  getApiErrorMessage,
+  isJsonContentType,
+  validateGlbBlob,
+} from "../utils/glb-response";
+
+const GENERATION_TIMEOUT_MS = 120000; // Hugging Face Spaces can cold start, so keep this above typical browser timeouts.
 
 const Home = () => {
   const heading = "Go from 2D Model to Fully Rigged in Seconds. No, Really.";
@@ -17,6 +25,7 @@ const Home = () => {
   const [isComplete, setIsComplete] = useState(false);
 
   const fileInputRef = useRef(null);
+  const activeRequestRef = useRef(null);
 
   const blobToBase64 = (blob) =>
     new Promise((resolve, reject) => {
@@ -30,6 +39,17 @@ const Home = () => {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    const validation = validateImageFile(file);
+    if (!validation.valid) {
+      toast.error(validation.message);
+      event.target.value = "";
+      setUploadedImage(null);
+      setFile2d(null);
+      setIsComplete(false);
+      setGenerationStep("");
+      return;
+    }
+
     setFile2d(file);
 
     const reader = new FileReader();
@@ -41,22 +61,70 @@ const Home = () => {
   };
 
   const resetProcess = () => {
+    activeRequestRef.current?.controller.abort();
     setUploadedImage(null);
     setFile2d(null);
     setIsGenerating(false);
     setGenerationStep("");
     setIsComplete(false);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const cancelGeneration = () => {
+    if (!activeRequestRef.current) return;
+    activeRequestRef.current.reason = "cancelled";
+    activeRequestRef.current.controller.abort();
+    setGenerationStep("Cancelling generation...");
+  };
+
+  const waitForStep = (ms, signal) =>
+    new Promise((resolve, reject) => {
+      if (signal.aborted) {
+        reject(new DOMException("Generation cancelled", "AbortError"));
+        return;
+      }
+
+      const timeoutId = setTimeout(resolve, ms);
+      signal.addEventListener(
+        "abort",
+        () => {
+          clearTimeout(timeoutId);
+          reject(new DOMException("Generation cancelled", "AbortError"));
+        },
+        { once: true }
+      );
+    });
+
+  const getGenerationErrorMessage = (err, reason) => {
+    if (reason === "timeout") {
+      return "Generation timed out. Please try again with a smaller or clearer image.";
+    }
+
+    if (reason === "cancelled" || err?.name === "AbortError") {
+      return "Generation was cancelled.";
+    }
+
+    return err?.message || "Error processing image. Please try a different image.";
   };
 
   const startGeneration = async () => {
+    const controller = new AbortController();
+    const requestState = { controller, reason: null };
+    let timeoutId;
+
     try {
       if (!uploadedImage || !file2d) {
         toast.error("Please upload an image first.");
         return;
       }
 
+      if (isGenerating || activeRequestRef.current) return;
+
       setIsGenerating(true);
       setIsComplete(false);
+      activeRequestRef.current = requestState;
 
       const href = `${getBackendURL()}/api/rig-character`;
 
@@ -74,23 +142,34 @@ const Home = () => {
 
       setGenerationStep(steps[0]);
 
+      timeoutId = setTimeout(() => {
+        requestState.reason = "timeout";
+        controller.abort();
+      }, GENERATION_TIMEOUT_MS);
+
       const response = await fetch(href, {
         method: "POST",
         body: formData,
+        signal: controller.signal,
       });
 
       for (let i = 1; i < steps.length; i++) {
         setGenerationStep(steps[i]);
-        await new Promise((resolve) => setTimeout(resolve, 500));
+        await waitForStep(500, controller.signal);
       }
+
+      const contentType = response.headers.get("Content-Type") || "";
 
       if (!response.ok) {
         const errorData = await response
           .json()
-          .catch(() => ({ error: "An unknown server error occurred." }));
-        throw new Error(
-          errorData.error || `HTTP error! status: ${response.status}`
-        );
+          .catch(() => null);
+        throw new Error(getApiErrorMessage(errorData));
+      }
+
+      if (isJsonContentType(contentType)) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(getApiErrorMessage(errorData));
       }
 
       const disposition = response.headers.get("Content-Disposition");
@@ -103,28 +182,40 @@ const Home = () => {
       }
 
       const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
+      const glbValidation = await validateGlbBlob(blob);
+      if (!glbValidation.valid) {
+        throw new Error(glbValidation.message);
+      }
 
       const base64Data = await blobToBase64(blob);
       const dataToStore = { fileData: base64Data, filename, image: file2d };
 
       await saveFile(dataToStore);
 
+      const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", filename);
-      document.body.appendChild(link);
-      link.click();
-      link.parentNode.removeChild(link);
+      try {
+        link.href = url;
+        link.setAttribute("download", filename);
+        document.body.appendChild(link);
+        link.click();
+      } finally {
+        link.parentNode?.removeChild(link);
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }
 
       setIsComplete(true);
       toast.success("3D model generated successfully!");
     } catch (err) {
       console.error("Generation error:", err);
-      toast.error(
-        err?.message || "Error processing image. Please try a different image."
-      );
+      toast.error(getGenerationErrorMessage(err, requestState.reason));
     } finally {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      if (activeRequestRef.current === requestState) {
+        activeRequestRef.current = null;
+      }
       setIsGenerating(false);
     }
   };
@@ -148,6 +239,15 @@ const Home = () => {
             <h3 className="text-lg sm:text-xl font-semibold text-white">
               {isComplete ? "Generation Complete!" : "Generating 3D Model..."}
             </h3>
+
+            {isGenerating && (
+              <button
+                onClick={cancelGeneration}
+                className="rounded-xl bg-white/10 hover:bg-white/15 px-4 py-2 text-sm font-medium text-white transition"
+              >
+                Cancel
+              </button>
+            )}
 
             {isComplete && (
               <button
