@@ -1,8 +1,9 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CheckCircle, Clock, Upload, User } from "lucide-react";
 import { saveFile } from "../helper/db";
 import getBackendURL from "../config";
 import toast from "react-hot-toast";
+import GlbPreview from "./glb-preview";
 import {
   formatFileSize,
   MAX_UPLOAD_SIZE_BYTES,
@@ -63,9 +64,25 @@ const Home = () => {
   const [generationStatus, setGenerationStatus] = useState(null);
   const [feedback, setFeedback] = useState(null);
   const [isComplete, setIsComplete] = useState(false);
+  const [generatedPreview, setGeneratedPreview] = useState(null);
 
   const fileInputRef = useRef(null);
   const activeRequestRef = useRef(null);
+  const previewUrlRef = useRef(null);
+
+  const revokeGeneratedPreviewUrl = () => {
+    if (previewUrlRef.current) {
+      URL.revokeObjectURL(previewUrlRef.current);
+      previewUrlRef.current = null;
+    }
+  };
+
+  const clearGeneratedPreview = () => {
+    revokeGeneratedPreviewUrl();
+    setGeneratedPreview(null);
+  };
+
+  useEffect(() => revokeGeneratedPreviewUrl, []);
 
   const blobToBase64 = (blob) =>
     new Promise((resolve, reject) => {
@@ -117,6 +134,7 @@ const Home = () => {
     setGenerationStatus(null);
     setFeedback(null);
     setIsComplete(false);
+    clearGeneratedPreview();
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -242,6 +260,11 @@ const Home = () => {
           "The GLB was generated, but it could not be saved in Recent Files. Please try again."
         );
       }
+
+      clearGeneratedPreview();
+      const previewUrl = URL.createObjectURL(blob);
+      previewUrlRef.current = previewUrl;
+      setGeneratedPreview({ url: previewUrl, filename });
 
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -371,6 +394,14 @@ const Home = () => {
             </div>
           )}
         </section>
+      )}
+
+      {isComplete && generatedPreview && (
+        <GlbPreview
+          src={generatedPreview.url}
+          filename={generatedPreview.filename}
+          helperText="Inspect the generated GLB in-browser. The automatic download is still preserved."
+        />
       )}
 
       {/* Main card */}

@@ -12,6 +12,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@google/model-viewer": "^4.2.0",
     "@tailwindcss/vite": "^4.1.11",
     "idb": "^8.0.3",
     "lucide-react": "^0.539.0",

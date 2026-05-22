@@ -1,8 +1,10 @@
-import { Download, File, Trash2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Download, Eye, File, Trash2, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { deleteFile, getAllFiles } from '../helper/db';
 import toast from 'react-hot-toast';
+import GlbPreview from './glb-preview';
+import { dataUrlToBlob } from '../utils/glb-file';
 
 const formatSavedAt = (value) => {
     if (!value) return 'Saved date unavailable';
@@ -22,21 +24,22 @@ const RecentFiles = () => {
     const [generatedFiles, setRecentFiles] = useState(null);
     const [deletingId, setDeletingId] = useState(null);
     const [listMessage, setListMessage] = useState(null);
+    const [previewFile, setPreviewFile] = useState(null);
+    const previewUrlRef = useRef(null);
 
-    const base64ToBlob = (base64Data, contentType = 'model/gltf-binary') => {
-        const byteCharacters = atob(base64Data.split(',')[1]);
-        const byteArrays = [];
-        for (let offset = 0; offset < byteCharacters.length; offset += 512) {
-            const slice = byteCharacters.slice(offset, offset + 512);
-            const byteNumbers = new Array(slice.length);
-            for (let i = 0; i < slice.length; i++) {
-                byteNumbers[i] = slice.charCodeAt(i);
-            }
-            const byteArray = new Uint8Array(byteNumbers);
-            byteArrays.push(byteArray);
+    const revokePreviewUrl = () => {
+        if (previewUrlRef.current) {
+            URL.revokeObjectURL(previewUrlRef.current);
+            previewUrlRef.current = null;
         }
-        return new Blob(byteArrays, { type: contentType });
     };
+
+    const clearPreview = () => {
+        revokePreviewUrl();
+        setPreviewFile(null);
+    };
+
+    useEffect(() => revokePreviewUrl, []);
 
     const handleRedownload = (file) => {
         if (!file) {
@@ -45,7 +48,15 @@ const RecentFiles = () => {
         }
 
         const { fileData, filename = "download.glb" } = file;
-        const blob = base64ToBlob(fileData);
+        let blob;
+        try {
+            blob = dataUrlToBlob(fileData);
+        } catch (error) {
+            console.error("Failed to prepare saved GLB download:", error);
+            setListMessage({ type: 'error', text: 'This saved GLB could not be prepared for download.' });
+            toast.error('Saved GLB could not be downloaded.');
+            return;
+        }
         const url = URL.createObjectURL(blob);
 
         const link = document.createElement('a');
@@ -60,6 +71,27 @@ const RecentFiles = () => {
         }
     };
 
+    const handlePreview = (file) => {
+        if (!file) return;
+
+        try {
+            const blob = dataUrlToBlob(file.fileData);
+            const url = URL.createObjectURL(blob);
+            revokePreviewUrl();
+            previewUrlRef.current = url;
+            setPreviewFile({
+                id: file.id,
+                filename: file.filename || 'download.glb',
+                url,
+            });
+            setListMessage(null);
+        } catch (error) {
+            console.error("Failed to prepare saved GLB preview:", error);
+            setListMessage({ type: 'error', text: 'This saved GLB could not be opened in the preview.' });
+            toast.error('Saved GLB could not be previewed.');
+        }
+    };
+
     const handleRemove = async (id) => {
         const confirmed = window.confirm("Delete this saved GLB from this browser?");
         if (confirmed) {
@@ -67,6 +99,9 @@ const RecentFiles = () => {
             try {
                 await deleteFile(id);
                 setRecentFiles((files) => files.filter(item => item.id !== id));
+                if (previewFile?.id === id) {
+                    clearPreview();
+                }
                 setListMessage({ type: 'success', text: 'Saved GLB deleted from this browser.' });
                 toast.success('Successfully removed!');
             } catch (error) {
@@ -116,6 +151,25 @@ const RecentFiles = () => {
                 </section>
             )}
 
+            {previewFile && (
+                <GlbPreview
+                    src={previewFile.url}
+                    filename={previewFile.filename}
+                    helperText="Preview this saved GLB from local browser storage. Download and delete controls remain available below."
+                    actions={
+                        <button
+                            type="button"
+                            onClick={clearPreview}
+                            className="inline-flex items-center gap-2 rounded-xl bg-white/10 hover:bg-white/15 px-4 py-2 text-sm font-medium text-white transition"
+                            aria-label={`Close preview for ${previewFile.filename}`}
+                        >
+                            <X className="h-4 w-4" aria-hidden="true" />
+                            <span>Close Preview</span>
+                        </button>
+                    }
+                />
+            )}
+
             {/* Files List */}
             {generatedFiles?.length > 0 && (
                 <section className="glass overflow-hidden">
@@ -126,11 +180,11 @@ const RecentFiles = () => {
                         {generatedFiles.map((file) => (
                             <div 
                                 key={file.id} 
-                                className="p-5 flex items-center justify-between hover:bg-white/[0.02] transition-colors"
+                                className="p-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between hover:bg-white/[0.02] transition-colors"
                             >
                                 <div className="flex items-center gap-4">
                                     <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500 via-violet-500 to-pink-500 flex items-center justify-center">
-                                        <Download className="w-5 h-5 text-white" />
+                                        <Download className="w-5 h-5 text-white" aria-hidden="true" />
                                     </div>
                                     <div className="max-w-[200px] sm:max-w-md truncate">
                                         <span className="block truncate text-white font-medium" title={file.filename}>
@@ -141,22 +195,33 @@ const RecentFiles = () => {
                                         </span>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-2">
+                                <div className="grid grid-cols-3 gap-2 sm:flex sm:items-center">
+                                    <button
+                                        type="button"
+                                        onClick={() => handlePreview(file)}
+                                        aria-label={`Preview ${file.filename || 'saved GLB'}`}
+                                        className="flex items-center justify-center gap-2 rounded-xl bg-white/10 hover:bg-white/15 px-3 py-2 text-sm font-medium text-white transition sm:px-4"
+                                    >
+                                        <Eye className="w-4 h-4" aria-hidden="true" />
+                                        <span className="hidden sm:inline">Preview</span>
+                                    </button>
                                     <button 
+                                        type="button"
                                         onClick={() => handleRedownload(file)}
                                         aria-label={`Download ${file.filename || 'saved GLB'}`}
-                                        className="flex items-center gap-2 rounded-xl bg-white/10 hover:bg-white/15 px-4 py-2 text-sm font-medium text-white transition"
+                                        className="flex items-center justify-center gap-2 rounded-xl bg-white/10 hover:bg-white/15 px-3 py-2 text-sm font-medium text-white transition sm:px-4"
                                     >
-                                        <Download className="w-4 h-4" />
+                                        <Download className="w-4 h-4" aria-hidden="true" />
                                         <span className="hidden sm:inline">Download</span>
                                     </button>
                                     <button 
+                                        type="button"
                                         onClick={() => handleRemove(file.id)}
                                         disabled={deletingId === file.id}
                                         aria-label={`Delete ${file.filename || 'saved GLB'}`}
-                                        className="flex items-center gap-2 rounded-xl bg-red-500/20 hover:bg-red-500/30 disabled:cursor-not-allowed disabled:opacity-60 px-4 py-2 text-sm font-medium text-red-300 transition"
+                                        className="flex items-center justify-center gap-2 rounded-xl bg-red-500/20 hover:bg-red-500/30 disabled:cursor-not-allowed disabled:opacity-60 px-3 py-2 text-sm font-medium text-red-300 transition sm:px-4"
                                     >
-                                        <Trash2 className="w-4 h-4" />
+                                        <Trash2 className="w-4 h-4" aria-hidden="true" />
                                         <span className="hidden sm:inline">
                                             {deletingId === file.id ? "Deleting..." : "Delete"}
                                         </span>
