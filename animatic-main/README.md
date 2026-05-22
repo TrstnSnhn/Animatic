@@ -6,7 +6,7 @@ The project connects a Vite + Preact upload interface to a hosted ML-backed Flas
 
 ## Project Overview
 
-Animatic provides a browser-based workflow for uploading a front-facing 2D character image and generating a basic rigged GLB. The goal is to demonstrate an end-to-end ML web application: frontend upload flow, API integration, model-backed keypoint prediction, 3D asset generation basics, and deployment across separate frontend and backend hosts.
+Animatic provides a browser-based workflow for uploading a front-facing 2D character image, generating a basic rigged GLB, previewing it in-browser, and downloading it. The goal is to demonstrate an end-to-end ML web application: frontend upload flow, API integration, model-backed keypoint prediction, 3D asset generation basics, and deployment across separate frontend and backend hosts.
 
 ## How It Works
 
@@ -16,7 +16,8 @@ Animatic provides a browser-based workflow for uploading a front-facing 2D chara
 4. The API uses the predicted keypoints to create a simple mesh and armature structure.
 5. The uploaded image is embedded as texture data.
 6. The API returns a `.glb` file for download.
-7. The frontend can store generated files locally in the browser with IndexedDB.
+7. The frontend shows an in-browser GLB preview and keeps the download flow available.
+8. The frontend can store generated files locally in the browser with IndexedDB.
 
 ## Architecture
 
@@ -24,6 +25,7 @@ Animatic provides a browser-based workflow for uploading a front-facing 2D chara
 - **Backend API:** Flask API for upload handling, keypoint prediction, and GLB generation
 - **ML hosting:** Hugging Face Spaces for the ML-backed API
 - **Frontend hosting:** Vercel static deployment
+- **GLB preview:** in-browser preview for generated and recent GLB files
 - **Local browser storage:** IndexedDB for generated GLB files
 - **Deployment configuration:** `VITE_API_URL` for API endpoint configuration and Vercel rewrites for SPA routing
 
@@ -66,7 +68,6 @@ Animatic demonstrates practical experience building and deploying an ML-backed w
 - Clean up temporary GLB files after API responses.
 - Return safer, structured API errors instead of raw exception messages.
 - Improve deployment documentation for Vercel and Hugging Face Spaces.
-- Add an in-browser GLB preview after generation.
 - Add tests for frontend request handling and API validation behavior.
 
 ## Local Development
