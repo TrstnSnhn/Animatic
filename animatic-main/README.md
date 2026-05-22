@@ -104,8 +104,9 @@ The API expects the trained Keras model to be available through `CNN_MODEL_PATH`
 
 The frontend and ML API are deployed separately:
 
-- **Frontend:** deploy `animatic-main/web` as a Vite static app on Vercel.
+- **Frontend:** deploy `animatic-main/web` as the Vercel project root for the Vite static app.
 - **API:** deploy `animatic-main/api` as the Flask/Gunicorn service on Hugging Face Spaces.
 - **Configuration:** set the frontend `VITE_API_URL` value to the deployed Hugging Face Spaces API URL.
+- **Model path:** make the trained Keras model available to the API through `CNN_MODEL_PATH`, or place it at the default `trained_model/best_model.keras` path expected by the API.
 
 This separation keeps the Vercel deployment lightweight while allowing the larger ML model and Python dependencies to run in the API environment.

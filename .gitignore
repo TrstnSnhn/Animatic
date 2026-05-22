@@ -8,3 +8,15 @@ trained_model/
 # ML artifacts
 trained_model/
 *.keras
+
+# Python generated files
+__pycache__/
+*.py[cod]
+
+# Frontend dependencies and build output
+node_modules/
+dist/
+animatic-main/web/dist/
+
+# Misplaced Node lockfile in the Python API package
+animatic-main/api/package-lock.json
