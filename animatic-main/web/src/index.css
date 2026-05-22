@@ -28,6 +28,13 @@
   body {
     @apply bg-neutral-950 text-white;
   }
+
+  button:focus-visible,
+  a:focus-visible,
+  input:focus-visible {
+    outline: 2px solid rgba(0, 194, 255, 0.75);
+    outline-offset: 3px;
+  }
 }
 
 @layer components {

@@ -33,7 +33,7 @@ export async function validateGlbBlob(blob) {
   if (!blob || blob.size < 4) {
     return {
       valid: false,
-      message: "The server did not return a valid GLB file.",
+      message: "The backend response was not a valid GLB file. Please try again.",
     };
   }
 
@@ -43,7 +43,7 @@ export async function validateGlbBlob(blob) {
   if (magic !== GLB_MAGIC) {
     return {
       valid: false,
-      message: "The server did not return a valid GLB file.",
+      message: "The backend response was not a valid GLB file. Please try again.",
     };
   }
 

@@ -4,9 +4,24 @@ import { NavLink } from 'react-router-dom';
 import { deleteFile, getAllFiles } from '../helper/db';
 import toast from 'react-hot-toast';
 
+const formatSavedAt = (value) => {
+    if (!value) return 'Saved date unavailable';
+
+    const savedAt = new Date(value);
+    if (Number.isNaN(savedAt.getTime())) {
+        return 'Saved date unavailable';
+    }
+
+    return new Intl.DateTimeFormat(undefined, {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+    }).format(savedAt);
+};
+
 const RecentFiles = () => {
     const [generatedFiles, setRecentFiles] = useState(null);
     const [deletingId, setDeletingId] = useState(null);
+    const [listMessage, setListMessage] = useState(null);
 
     const base64ToBlob = (base64Data, contentType = 'model/gltf-binary') => {
         const byteCharacters = atob(base64Data.split(',')[1]);
@@ -34,24 +49,29 @@ const RecentFiles = () => {
         const url = URL.createObjectURL(blob);
 
         const link = document.createElement('a');
-        link.href = url;
-        link.setAttribute('download', filename);
-        document.body.appendChild(link);
-        link.click();
-        link.parentNode.removeChild(link);
-        URL.revokeObjectURL(url);
+        try {
+            link.href = url;
+            link.setAttribute('download', filename);
+            document.body.appendChild(link);
+            link.click();
+        } finally {
+            link.parentNode?.removeChild(link);
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+        }
     };
 
     const handleRemove = async (id) => {
-        const confirmed = window.confirm("Are you sure you want to delete this?");
+        const confirmed = window.confirm("Delete this saved GLB from this browser?");
         if (confirmed) {
             setDeletingId(id);
             try {
                 await deleteFile(id);
                 setRecentFiles((files) => files.filter(item => item.id !== id));
+                setListMessage({ type: 'success', text: 'Saved GLB deleted from this browser.' });
                 toast.success('Successfully removed!');
             } catch (error) {
                 console.error("Failed to delete file:", error);
+                setListMessage({ type: 'error', text: 'Could not delete the saved GLB. Please try again.' });
                 toast.error('Failed to delete file. Please try again.');
             } finally {
                 setDeletingId(null);
@@ -67,6 +87,7 @@ const RecentFiles = () => {
             } catch (error) {
                 console.error("Failed to load recent files:", error);
                 toast.error('Failed to load recent files.');
+                setListMessage({ type: 'error', text: 'Recent files could not be loaded. Refresh the page or try again.' });
                 setRecentFiles([]);
             }
         })();
@@ -77,15 +98,29 @@ const RecentFiles = () => {
             {/* Header */}
             <section className="text-center">
                 <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-white">
-                    Download your previously generated 3D models
+                    Download your previously generated GLB files
                 </h1>
             </section>
+
+            {listMessage && (
+                <section
+                    className={`rounded-xl border px-4 py-3 text-sm ${
+                        listMessage.type === 'error'
+                            ? 'border-red-400/30 bg-red-500/10 text-red-100'
+                            : 'border-emerald-400/30 bg-emerald-500/10 text-emerald-100'
+                    }`}
+                    role={listMessage.type === 'error' ? 'alert' : 'status'}
+                    aria-live={listMessage.type === 'error' ? 'assertive' : 'polite'}
+                >
+                    {listMessage.text}
+                </section>
+            )}
 
             {/* Files List */}
             {generatedFiles?.length > 0 && (
                 <section className="glass overflow-hidden">
                     <div className="p-5 border-b border-white/10">
-                        <h3 className="text-lg font-semibold text-white text-center">Generated Files</h3>
+                        <h3 className="text-lg font-semibold text-white text-center">Generated GLB Files</h3>
                     </div>
                     <div className="divide-y divide-white/10">
                         {generatedFiles.map((file) => (
@@ -98,12 +133,18 @@ const RecentFiles = () => {
                                         <Download className="w-5 h-5 text-white" />
                                     </div>
                                     <div className="max-w-[200px] sm:max-w-md truncate">
-                                        <span className="text-white font-medium">{file.filename}</span>
+                                        <span className="block truncate text-white font-medium" title={file.filename}>
+                                            {file.filename}
+                                        </span>
+                                        <span className="mt-1 block text-xs text-white/50">
+                                            {formatSavedAt(file.createdAt)}
+                                        </span>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <button 
                                         onClick={() => handleRedownload(file)}
+                                        aria-label={`Download ${file.filename || 'saved GLB'}`}
                                         className="flex items-center gap-2 rounded-xl bg-white/10 hover:bg-white/15 px-4 py-2 text-sm font-medium text-white transition"
                                     >
                                         <Download className="w-4 h-4" />
@@ -112,7 +153,8 @@ const RecentFiles = () => {
                                     <button 
                                         onClick={() => handleRemove(file.id)}
                                         disabled={deletingId === file.id}
-                                        className="flex items-center gap-2 rounded-xl bg-red-500/20 hover:bg-red-500/30 px-4 py-2 text-sm font-medium text-red-300 transition"
+                                        aria-label={`Delete ${file.filename || 'saved GLB'}`}
+                                        className="flex items-center gap-2 rounded-xl bg-red-500/20 hover:bg-red-500/30 disabled:cursor-not-allowed disabled:opacity-60 px-4 py-2 text-sm font-medium text-red-300 transition"
                                     >
                                         <Trash2 className="w-4 h-4" />
                                         <span className="hidden sm:inline">
@@ -130,8 +172,10 @@ const RecentFiles = () => {
             {generatedFiles?.length === 0 && (
                 <section className="glass p-12 text-center">
                     <File className="w-16 h-16 text-white/30 mx-auto mb-4" />
-                    <h4 className="text-xl font-medium text-white mb-2">No recent files</h4>
-                    <p className="text-white/60 mb-6">Generate your first 3D model to see it here</p>
+                    <h4 className="text-xl font-medium text-white mb-2">No generated GLB files yet</h4>
+                    <p className="text-white/60 mb-6">
+                        Successful generations are saved locally in this browser so you can download them again later.
+                    </p>
                     <NavLink 
                         to="/"
                         className="inline-block rounded-xl bg-white/10 hover:bg-white/15 px-6 py-3 text-sm font-medium text-white transition"
@@ -143,9 +187,9 @@ const RecentFiles = () => {
 
             {/* Loading State */}
             {generatedFiles === null && (
-                <section className="glass p-12 text-center">
+                <section className="glass p-12 text-center" role="status" aria-live="polite">
                     <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin mx-auto mb-4" />
-                    <p className="text-white/60">Loading files...</p>
+                    <p className="text-white/60">Loading recent GLB files...</p>
                 </section>
             )}
         </div>

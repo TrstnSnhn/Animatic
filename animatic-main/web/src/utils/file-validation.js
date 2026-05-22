@@ -2,6 +2,24 @@ export const MAX_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024; // Keep uploads conservat
 
 const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
+export function formatFileSize(bytes) {
+  if (!Number.isFinite(bytes) || bytes <= 0) {
+    return "0 KB";
+  }
+
+  const units = ["B", "KB", "MB", "GB"];
+  const unitIndex = Math.min(
+    Math.floor(Math.log(bytes) / Math.log(1024)),
+    units.length - 1
+  );
+  const value = bytes / 1024 ** unitIndex;
+  const formattedValue = Number.isInteger(value)
+    ? value.toString()
+    : value.toFixed(1);
+
+  return `${formattedValue} ${units[unitIndex]}`;
+}
+
 export function validateImageFile(file) {
   if (!file) {
     return { valid: false, message: "Please choose an image file first." };

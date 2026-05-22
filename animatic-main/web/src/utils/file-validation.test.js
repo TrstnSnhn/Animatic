@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  formatFileSize,
   MAX_UPLOAD_SIZE_BYTES,
   validateImageFile,
 } from "./file-validation.js";
@@ -36,4 +37,10 @@ test("rejects oversized files", () => {
 
   assert.equal(result.valid, false);
   assert.match(result.message, /10 MB/);
+});
+
+test("formats file sizes for upload feedback", () => {
+  assert.equal(formatFileSize(0), "0 KB");
+  assert.equal(formatFileSize(1536), "1.5 KB");
+  assert.equal(formatFileSize(3 * 1024 * 1024), "3 MB");
 });
