@@ -116,11 +116,7 @@ const GlbPreview = ({
           exposure="1"
           environment-image="neutral"
           className="h-full w-full"
-        >
-          <div className="flex h-full items-center justify-center p-6 text-center text-sm text-white/60">
-            The GLB preview could not be displayed in this browser.
-          </div>
-        </model-viewer>
+        />
 
         {status === "loading" && (
           <div
